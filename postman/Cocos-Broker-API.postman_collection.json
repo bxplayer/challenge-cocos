@@ -1,0 +1,359 @@
+{
+  "info": {
+    "name": "Cocos Broker API",
+    "description": "Colección de ejemplos de la API del broker (portfolio, búsqueda de instrumentos y órdenes).\n\nLevantar antes:\n- `docker compose up -d` (Postgres + Redis)\n- `./mvnw spring-boot:run`\n\no todo dockerizado: `docker compose --profile full up -d --build`.\n\nUsa la variable `base_url` (por defecto http://localhost:8080). Importar también el environment `Cocos-Broker-Local.postman_environment.json`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Portfolio",
+      "item": [
+        {
+          "name": "Portfolio del usuario 1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/users/1/portfolio",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "users", "1", "portfolio"]
+            },
+            "description": "Valor total de la cuenta, cash disponible y posiciones."
+          }
+        },
+        {
+          "name": "Portfolio de usuario inexistente (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/users/999/portfolio",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "users", "999", "portfolio"]
+            },
+            "description": "Devuelve 404 con application/problem+json (RFC 7807)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Instrumentos",
+      "item": [
+        {
+          "name": "Buscar por ticker o nombre",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/instruments?query=banco",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "instruments"],
+              "query": [
+                { "key": "query", "value": "banco" }
+              ]
+            },
+            "description": "Búsqueda paginada (contains, case-insensitive) por ticker y/o nombre."
+          }
+        },
+        {
+          "name": "Primera página, 5 por página, orden por nombre desc",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/instruments?page=0&size=5&sort=name,desc",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "instruments"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "5" },
+                { "key": "sort", "value": "name,desc" }
+              ]
+            },
+            "description": "Paginación estándar de Spring (page, size, sort)."
+          }
+        },
+        {
+          "name": "Sin filtro (todos, paginado)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/instruments?page=0&size=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "instruments"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Sin query devuelve todos los instrumentos, paginados."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Órdenes",
+      "item": [
+        {
+          "name": "MARKET BUY por cantidad (FILLED)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"instrumentId\": 54,\n  \"side\": \"BUY\",\n  \"type\": \"MARKET\",\n  \"size\": 10\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "orders"]
+            },
+            "description": "MARKET BUY por cantidad -> FILLED (precio = último close)."
+          }
+        },
+        {
+          "name": "MARKET BUY por monto (FILLED)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"instrumentId\": 54,\n  \"side\": \"BUY\",\n  \"type\": \"MARKET\",\n  \"amount\": 100000\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "orders"]
+            },
+            "description": "MARKET BUY por monto -> FILLED (size = floor(monto / precio))."
+          }
+        },
+        {
+          "name": "LIMIT BUY (NEW, reserva cash)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"instrumentId\": 54,\n  \"side\": \"BUY\",\n  \"type\": \"LIMIT\",\n  \"size\": 10,\n  \"price\": 200\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "orders"]
+            },
+            "description": "LIMIT BUY -> NEW (queda pendiente y reserva cash)."
+          }
+        },
+        {
+          "name": "MARKET SELL (FILLED)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"instrumentId\": 47,\n  \"side\": \"SELL\",\n  \"type\": \"MARKET\",\n  \"size\": 10\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "orders"]
+            },
+            "description": "MARKET SELL -> FILLED (si hay acciones suficientes)."
+          }
+        },
+        {
+          "name": "BUY con fondos insuficientes (201 REJECTED)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"instrumentId\": 5,\n  \"side\": \"BUY\",\n  \"type\": \"MARKET\",\n  \"size\": 1000\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "orders"]
+            },
+            "description": "Sin fondos suficientes -> se persiste con status=REJECTED y se devuelve 201 (no es error HTTP)."
+          }
+        },
+        {
+          "name": "Idempotencia (mismo Idempotency-Key)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "demo-key-123" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"instrumentId\": 54,\n  \"side\": \"BUY\",\n  \"type\": \"MARKET\",\n  \"size\": 10\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "orders"]
+            },
+            "description": "Reenviar con el mismo Idempotency-Key devuelve la MISMA orden (no duplica)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cancelar orden",
+      "item": [
+        {
+          "name": "Cancelar orden NEW (CANCELLED)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/orders/7/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "orders", "7", "cancel"]
+            },
+            "description": "Cancelar una orden NEW (la semilla #5 y #7 están en NEW) -> CANCELLED."
+          }
+        },
+        {
+          "name": "Cancelar orden FILLED (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/orders/2/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "orders", "2", "cancel"]
+            },
+            "description": "Cancelar una orden FILLED (#2) -> 409 ProblemDetail."
+          }
+        },
+        {
+          "name": "Cancelar orden inexistente (404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/orders/999/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "orders", "999", "cancel"]
+            },
+            "description": "Cancelar una orden inexistente -> 404 ProblemDetail."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Casos de error (validación)",
+      "item": [
+        {
+          "name": "LIMIT sin price ni size/amount (422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"instrumentId\": 54,\n  \"side\": \"BUY\",\n  \"type\": \"LIMIT\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "orders"]
+            },
+            "description": "LIMIT sin price y sin size/amount -> 422 (regla del caso de uso)."
+          }
+        },
+        {
+          "name": "Monto insuficiente para 1 acción (422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"instrumentId\": 54,\n  \"side\": \"BUY\",\n  \"type\": \"MARKET\",\n  \"amount\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/orders",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "orders"]
+            },
+            "description": "Monto insuficiente para comprar 1 acción -> 422 Orden inválida."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Operación / docs",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/actuator/health",
+              "host": ["{{base_url}}"],
+              "path": ["actuator", "health"]
+            },
+            "description": "Estado de la app (incluye db y redis)."
+          }
+        },
+        {
+          "name": "OpenAPI JSON",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v3/api-docs",
+              "host": ["{{base_url}}"],
+              "path": ["v3", "api-docs"]
+            },
+            "description": "Especificación OpenAPI generada por springdoc."
+          }
+        }
+      ]
+    }
+  ]
+}

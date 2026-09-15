@@ -1,0 +1,62 @@
+name: cocos-broker
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cocos-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-cocos}
+      POSTGRES_USER: ${DB_USER:-cocos}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-cocos}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      # Schema limpio (derivado de schema.sql) cargado en la primera inicialización.
+      - ./src/main/resources/db/init:/docker-entrypoint-initdb.d:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-cocos} -d ${DB_NAME:-cocos}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: cocos-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # App dockerizada. Opt-in con el profile `full` (así `docker compose up -d`
+  # levanta solo la infra para desarrollar con ./mvnw spring-boot:run).
+  # Stack completo:  docker compose --profile full up -d --build
+  app:
+    build: .
+    container_name: cocos-app
+    profiles: ["full"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 8080
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-cocos}
+      DB_USER: ${DB_USER:-cocos}
+      DB_PASSWORD: ${DB_PASSWORD:-cocos}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PORTFOLIO_CACHE_TTL_SECONDS: ${PORTFOLIO_CACHE_TTL_SECONDS:-60}
+      IDEMPOTENCY_ENABLED: ${IDEMPOTENCY_ENABLED:-true}
+      IDEMPOTENCY_KEY_TTL_SECONDS: ${IDEMPOTENCY_KEY_TTL_SECONDS:-86400}
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+
+volumes:
+  pgdata:

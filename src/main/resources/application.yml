@@ -1,0 +1,60 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: cocos-broker
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:cocos}
+    username: ${DB_USER:cocos}
+    password: ${DB_PASSWORD:cocos}
+    hikari:
+      pool-name: cocos-pool
+      maximum-pool-size: ${DB_POOL_MAX:10}
+
+  jpa:
+    hibernate:
+      # El schema lo gestiona el init de Docker; la app no crea ni altera tablas.
+      ddl-auto: none
+    open-in-view: false
+    show-sql: ${JPA_SHOW_SQL:false}
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      # Usamos RedisTemplate (cache/idempotencia), no repositorios @RedisHash.
+      repositories:
+        enabled: false
+    web:
+      pageable:
+        default-page-size: 20
+        max-page-size: 100
+        one-indexed-parameters: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+  health:
+    redis:
+      enabled: ${MANAGEMENT_HEALTH_REDIS_ENABLED:true}
+
+# Configuración propia de la aplicación
+app:
+  cache:
+    portfolio-ttl-seconds: ${PORTFOLIO_CACHE_TTL_SECONDS:60}
+  idempotency:
+    # Apaga por completo la idempotencia de POST /orders (reintentos con el mismo
+    # Idempotency-Key crearían órdenes duplicadas). Prendida por defecto.
+    enabled: ${IDEMPOTENCY_ENABLED:true}
+    order-key-ttl-seconds: ${IDEMPOTENCY_KEY_TTL_SECONDS:86400}
